@@ -18,6 +18,7 @@
     --text-dim: #666;
     --error: #ff4466;
     --warning: #ffaa00;
+    --ok: #00ff88;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -33,10 +34,7 @@
     padding: 40px 20px 60px;
   }
 
-  header {
-    text-align: center;
-    margin-bottom: 40px;
-  }
+  header { text-align: center; margin-bottom: 40px; }
 
   header h1 {
     font-family: 'Space Mono', monospace;
@@ -81,21 +79,10 @@
     text-align: center;
     cursor: pointer;
     transition: all 0.2s ease;
-    position: relative;
-    overflow: hidden;
   }
 
-  #dropzone.dragover {
-    border-color: var(--accent);
-    background: var(--accent-dim);
-  }
-
-  #dropzone.has-file {
-    border-style: solid;
-    border-color: var(--accent);
-    background: var(--accent-dim);
-  }
-
+  #dropzone.dragover { border-color: var(--accent); background: var(--accent-dim); }
+  #dropzone.has-file { border-style: solid; border-color: var(--accent); background: var(--accent-dim); }
   #dropzone .icon { font-size: 2.5rem; margin-bottom: 12px; display: block; }
   #dropzone .label { font-size: 1rem; color: var(--text); font-weight: 500; }
   #dropzone .sublabel { font-size: 0.8rem; color: var(--text-dim); margin-top: 6px; }
@@ -109,12 +96,7 @@
 
   #fileInput { display: none; }
 
-  .params-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-  }
-
+  .params-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .param-group { display: flex; flex-direction: column; gap: 6px; }
   .param-group.full { grid-column: 1 / -1; }
 
@@ -140,8 +122,7 @@
 
   input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
+    width: 16px; height: 16px;
     border-radius: 50%;
     background: var(--accent);
     box-shadow: 0 0 8px var(--accent-mid);
@@ -155,11 +136,11 @@
     font-family: 'Space Mono', monospace;
     font-size: 0.85rem;
     color: var(--accent);
-    min-width: 48px;
+    min-width: 52px;
     text-align: right;
   }
 
-  input[type="number"], input[type="text"] {
+  input[type="number"] {
     background: var(--bg);
     border: 1px solid var(--border);
     border-radius: 6px;
@@ -172,8 +153,74 @@
     transition: border-color 0.2s;
   }
 
-  input[type="number"]:focus, input[type="text"]:focus { border-color: var(--accent); }
+  input[type="number"]:focus { border-color: var(--accent); }
 
+  /* Size estimator */
+  #sizeEstimator {
+    display: none;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .estimator-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .estimator-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  .size-display { display: flex; align-items: center; gap: 10px; }
+
+  .size-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    transition: color 0.3s;
+    min-width: 70px;
+    text-align: right;
+  }
+
+  .size-bar-wrap {
+    flex: 1;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    max-width: 180px;
+  }
+
+  .size-bar {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s, background 0.3s;
+    width: 0%;
+  }
+
+  .green { color: var(--ok); background: var(--ok); }
+  .yellow { color: var(--warning); background: var(--warning); }
+  .red { color: var(--error); background: var(--error); }
+  .size-value.green { background: transparent; }
+  .size-value.yellow { background: transparent; }
+  .size-value.red { background: transparent; }
+
+  .size-note {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    margin-top: 8px;
+  }
+
+  /* Convert */
   #convertBtn {
     width: 100%;
     padding: 16px;
@@ -197,14 +244,9 @@
 
   #convertBtn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
-  #progressWrap { display: none; flex-direction: column; gap: 10px; }
+  #progressWrap { display: none; flex-direction: column; gap: 10px; margin-top: 14px; }
 
-  .progress-bar-outer {
-    height: 6px;
-    background: var(--border);
-    border-radius: 3px;
-    overflow: hidden;
-  }
+  .progress-bar-outer { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
 
   .progress-bar-inner {
     height: 100%;
@@ -212,7 +254,6 @@
     border-radius: 3px;
     width: 0%;
     transition: width 0.3s;
-    box-shadow: 0 0 10px var(--accent-mid);
     animation: progressPulse 1.5s ease-in-out infinite;
   }
 
@@ -228,6 +269,19 @@
     text-align: center;
   }
 
+  #errorBox {
+    display: none;
+    background: #1a0810;
+    border: 1px solid var(--error);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--error);
+    margin-top: 12px;
+  }
+
+  /* Result */
   #resultCard { display: none; }
 
   .result-preview {
@@ -272,33 +326,65 @@
 
   #downloadBtn:hover { background: var(--accent-dim); box-shadow: 0 0 16px var(--accent-dim); }
 
-  #resetBtn {
-    width: 100%;
-    padding: 10px;
-    background: transparent;
+  /* History */
+  .history-list {
+    margin-top: 16px;
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .history-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
     color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 6px;
+    padding: 8px 12px;
+  }
+
+  .hi-name {
     font-family: 'Space Mono', monospace;
     font-size: 0.75rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-top: 10px;
+    color: var(--text);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  #resetBtn:hover { color: var(--text); border-color: #444; }
-
-  #errorBox {
-    display: none;
-    background: #1a0810;
-    border: 1px solid var(--error);
-    border-radius: 8px;
-    padding: 14px 16px;
+  .hi-meta {
     font-family: 'Space Mono', monospace;
-    font-size: 0.8rem;
-    color: var(--error);
-    margin-top: 12px;
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    white-space: nowrap;
   }
+
+  .hi-dl {
+    color: var(--accent);
+    font-size: 0.8rem;
+    cursor: pointer;
+    text-decoration: none;
+    padding: 2px 8px;
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font-family: 'Space Mono', monospace;
+    transition: background 0.15s;
+  }
+
+  .hi-dl:hover { background: var(--accent-dim); }
 
   .formats-note {
     text-align: center;
@@ -338,7 +424,7 @@
     <div class="param-group full">
       <label>FPS — Frames per second</label>
       <div class="input-row">
-        <input type="range" id="fpsRange" min="1" max="30" value="10" oninput="sync('fps', this.value)">
+        <input type="range" id="fpsRange" min="1" max="30" value="10" oninput="onParamChange('fps', this.value)">
         <div class="value-badge" id="fpsVal">10 fps</div>
       </div>
     </div>
@@ -346,35 +432,46 @@
     <div class="param-group full">
       <label>Width — Output width (px)</label>
       <div class="input-row">
-        <input type="range" id="widthRange" min="120" max="960" step="40" value="480" oninput="sync('width', this.value)">
+        <input type="range" id="widthRange" min="120" max="960" step="40" value="480" oninput="onParamChange('width', this.value)">
         <div class="value-badge" id="widthVal">480 px</div>
       </div>
     </div>
 
     <div class="param-group">
       <label>Start time (seconds)</label>
-      <input type="number" id="startTime" value="0" min="0" step="0.1" placeholder="0">
+      <input type="number" id="startTime" value="0" min="0" step="0.1" placeholder="0" oninput="updateEstimate()">
     </div>
 
     <div class="param-group">
       <label>Duration (seconds)</label>
-      <input type="number" id="duration" value="" min="0.1" step="0.1" placeholder="full">
+      <input type="number" id="duration" value="" min="0.1" step="0.1" placeholder="full" oninput="updateEstimate()">
     </div>
 
+  </div>
+
+  <div id="sizeEstimator">
+    <div class="estimator-row">
+      <span class="estimator-label">Est. output size</span>
+      <div class="size-display">
+        <div class="size-bar-wrap">
+          <div class="size-bar" id="sizeBar"></div>
+        </div>
+        <div class="size-value" id="sizeValue">—</div>
+      </div>
+    </div>
+    <div class="size-note" id="sizeNote">Target: under 10 MB for easy sharing</div>
   </div>
 </div>
 
 <div class="card">
   <h2>03 — Convert</h2>
   <button id="convertBtn" disabled onclick="convert()">Select a video first</button>
-
   <div id="progressWrap">
     <div class="progress-bar-outer">
       <div class="progress-bar-inner" id="progressBar"></div>
     </div>
     <div class="progress-label" id="progressLabel">Uploading...</div>
   </div>
-
   <div id="errorBox"></div>
 </div>
 
@@ -385,44 +482,63 @@
   </div>
   <div class="result-meta" id="resultMeta"></div>
   <button id="downloadBtn" onclick="downloadGif()">↓ Download GIF</button>
-  <button id="resetBtn" onclick="reset()">Convert another video</button>
+  <div class="history-list" id="historyList" style="display:none">
+    <div class="history-label">Previous conversions</div>
+    <div id="historyItems"></div>
+  </div>
 </div>
 
 <script>
 let selectedFile = null;
+let videoDuration = null;
 let resultFilename = null;
+let currentResultMeta = null;
+let conversionHistory = [];
 
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('fileInput');
 
-dropzone.addEventListener('dragover', e => {
-  e.preventDefault();
-  dropzone.classList.add('dragover');
-});
-
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
 dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
-
 dropzone.addEventListener('drop', e => {
   e.preventDefault();
   dropzone.classList.remove('dragover');
   const file = e.dataTransfer.files[0];
   if (file) setFile(file);
 });
-
-fileInput.addEventListener('change', e => {
-  if (e.target.files[0]) setFile(e.target.files[0]);
-});
+fileInput.addEventListener('change', e => { if (e.target.files[0]) setFile(e.target.files[0]); });
 
 function setFile(file) {
   selectedFile = file;
+  videoDuration = null;
+
   dropzone.classList.add('has-file');
   dropzone.querySelector('.icon').textContent = '✅';
   dropzone.querySelector('.label').textContent = 'Video loaded';
   dropzone.querySelector('.sublabel').textContent = formatSize(file.size);
   document.getElementById('fileName').textContent = file.name;
+  document.getElementById('errorBox').style.display = 'none';
+
   const btn = document.getElementById('convertBtn');
   btn.disabled = false;
   btn.textContent = 'Convert to GIF →';
+
+  // Probe duration via object URL
+  const url = URL.createObjectURL(file);
+  const vid = document.createElement('video');
+  vid.preload = 'metadata';
+  vid.src = url;
+  vid.onloadedmetadata = () => {
+    videoDuration = isFinite(vid.duration) ? vid.duration : null;
+    URL.revokeObjectURL(url);
+    document.getElementById('sizeEstimator').style.display = 'block';
+    updateEstimate();
+  };
+  vid.onerror = () => {
+    URL.revokeObjectURL(url);
+    document.getElementById('sizeEstimator').style.display = 'block';
+    updateEstimate();
+  };
 }
 
 function formatSize(bytes) {
@@ -430,11 +546,61 @@ function formatSize(bytes) {
   return (bytes / 1024).toFixed(0) + ' KB';
 }
 
-function sync(type, val) {
-  if (type === 'fps') {
-    document.getElementById('fpsVal').textContent = val + ' fps';
+function onParamChange(type, val) {
+  if (type === 'fps') document.getElementById('fpsVal').textContent = val + ' fps';
+  else document.getElementById('widthVal').textContent = val + ' px';
+  updateEstimate();
+}
+
+function updateEstimate() {
+  if (!selectedFile) return;
+
+  const fps = parseInt(document.getElementById('fpsRange').value);
+  const width = parseInt(document.getElementById('widthRange').value);
+  const startTime = parseFloat(document.getElementById('startTime').value) || 0;
+  const durationInput = parseFloat(document.getElementById('duration').value);
+
+  let effectiveDuration;
+  if (durationInput > 0) {
+    effectiveDuration = durationInput;
+  } else if (videoDuration) {
+    effectiveDuration = Math.max(0, videoDuration - startTime);
   } else {
-    document.getElementById('widthVal').textContent = val + ' px';
+    document.getElementById('sizeValue').textContent = '?';
+    document.getElementById('sizeNote').textContent = 'Enter a duration to estimate size';
+    return;
+  }
+
+  // Estimate: palette GIFs ~0.5 bits/pixel/frame, height estimated from 16:9
+  const height = Math.round(width * 9 / 16);
+  const estimatedBytes = (width * height * fps * effectiveDuration * 0.5) / 8;
+  const estimatedMB = estimatedBytes / (1024 * 1024);
+
+  const sizeValue = document.getElementById('sizeValue');
+  const sizeBar = document.getElementById('sizeBar');
+  const sizeNote = document.getElementById('sizeNote');
+
+  sizeValue.textContent = estimatedMB.toFixed(1) + ' MB';
+
+  const pct = Math.min((estimatedMB / 10) * 100, 100);
+  sizeBar.style.width = pct + '%';
+
+  // Reset classes
+  sizeValue.className = 'size-value';
+  sizeBar.className = 'size-bar';
+
+  if (estimatedMB <= 5) {
+    sizeValue.classList.add('green');
+    sizeBar.classList.add('green');
+    sizeNote.textContent = '✓ Well under 10 MB — good to go';
+  } else if (estimatedMB <= 10) {
+    sizeValue.classList.add('yellow');
+    sizeBar.classList.add('yellow');
+    sizeNote.textContent = '⚠ Close to 10 MB — consider lower FPS or width';
+  } else {
+    sizeValue.classList.add('red');
+    sizeBar.classList.add('red');
+    sizeNote.textContent = '✗ Likely over 10 MB — reduce FPS, width, or duration';
   }
 }
 
@@ -462,24 +628,37 @@ async function convert() {
   try {
     const resp = await fetch('/convert', { method: 'POST', body: formData });
     const data = await resp.json();
-
     stopProgress();
 
     if (!resp.ok || data.error) {
       showError(data.error || 'Conversion failed');
       btn.disabled = false;
-      btn.textContent = 'Try again →';
+      btn.textContent = 'Convert to GIF →';
       return;
     }
 
+    // Archive previous result to history
+    if (resultFilename && currentResultMeta) {
+      conversionHistory.unshift({ filename: resultFilename, ...currentResultMeta });
+      renderHistory();
+    }
+
     resultFilename = data.filename;
+    currentResultMeta = {
+      sizeMB: data.size_mb,
+      fps: document.getElementById('fpsRange').value,
+      width: document.getElementById('widthRange').value
+    };
+
     showResult(data);
+    btn.disabled = false;
+    btn.textContent = 'Convert to GIF →';
 
   } catch (err) {
     stopProgress();
     showError('Request failed: ' + err.message);
     btn.disabled = false;
-    btn.textContent = 'Try again →';
+    btn.textContent = 'Convert to GIF →';
   }
 }
 
@@ -491,16 +670,9 @@ function animateProgress() {
   document.getElementById('progressBar').style.width = '0%';
   document.getElementById('progressLabel').textContent = 'Uploading...';
   progressInterval = setInterval(() => {
-    if (progressVal < 30) {
-      progressVal += 2;
-      document.getElementById('progressLabel').textContent = 'Uploading...';
-    } else if (progressVal < 85) {
-      progressVal += 0.4;
-      document.getElementById('progressLabel').textContent = 'Generating palette & converting...';
-    } else if (progressVal < 95) {
-      progressVal += 0.1;
-      document.getElementById('progressLabel').textContent = 'Almost done...';
-    }
+    if (progressVal < 30) { progressVal += 2; document.getElementById('progressLabel').textContent = 'Uploading...'; }
+    else if (progressVal < 85) { progressVal += 0.4; document.getElementById('progressLabel').textContent = 'Generating palette & converting...'; }
+    else if (progressVal < 95) { progressVal += 0.1; document.getElementById('progressLabel').textContent = 'Almost done...'; }
     document.getElementById('progressBar').style.width = progressVal + '%';
   }, 80);
 }
@@ -508,28 +680,33 @@ function animateProgress() {
 function stopProgress() {
   clearInterval(progressInterval);
   document.getElementById('progressBar').style.width = '100%';
-  setTimeout(() => {
-    document.getElementById('progressWrap').style.display = 'none';
-  }, 400);
+  setTimeout(() => { document.getElementById('progressWrap').style.display = 'none'; }, 400);
 }
 
 function showResult(data) {
-  document.getElementById('convertBtn').textContent = '✓ Done';
-
   const resultCard = document.getElementById('resultCard');
   resultCard.style.display = 'block';
-
   document.getElementById('gifPreview').src = '/preview/' + data.filename + '?t=' + Date.now();
-
-  const fps = document.getElementById('fpsRange').value;
-  const width = document.getElementById('widthRange').value;
   document.getElementById('resultMeta').innerHTML = `
-    <div class="meta-chip">size <span>${data.size_mb} MB</span></div>
-    <div class="meta-chip">fps <span>${fps}</span></div>
-    <div class="meta-chip">width <span>${width}px</span></div>
+    <div class="meta-chip">actual size <span>${data.size_mb} MB</span></div>
+    <div class="meta-chip">fps <span>${currentResultMeta.fps}</span></div>
+    <div class="meta-chip">width <span>${currentResultMeta.width}px</span></div>
   `;
-
   resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderHistory() {
+  if (!conversionHistory.length) return;
+  const historyList = document.getElementById('historyList');
+  const historyItems = document.getElementById('historyItems');
+  historyList.style.display = 'block';
+  historyItems.innerHTML = conversionHistory.map(item => `
+    <div class="history-item">
+      <div class="hi-name">${item.filename}</div>
+      <div class="hi-meta">${item.fps} fps · ${item.width}px · ${item.sizeMB} MB</div>
+      <a class="hi-dl" href="/download/${item.filename}">↓</a>
+    </div>
+  `).join('');
 }
 
 function downloadGif() {
@@ -540,23 +717,6 @@ function showError(msg) {
   const box = document.getElementById('errorBox');
   box.textContent = '⚠ ' + msg;
   box.style.display = 'block';
-}
-
-function reset() {
-  selectedFile = null;
-  resultFilename = null;
-  document.getElementById('resultCard').style.display = 'none';
-  dropzone.classList.remove('has-file');
-  dropzone.querySelector('.icon').textContent = '🎬';
-  dropzone.querySelector('.label').textContent = 'Drop video here';
-  dropzone.querySelector('.sublabel').textContent = 'or click to browse';
-  document.getElementById('fileName').textContent = '';
-  document.getElementById('errorBox').style.display = 'none';
-  const btn = document.getElementById('convertBtn');
-  btn.disabled = true;
-  btn.textContent = 'Select a video first';
-  fileInput.value = '';
-  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 </script>
 </body>
