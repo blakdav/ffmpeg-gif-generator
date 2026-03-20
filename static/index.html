@@ -72,26 +72,28 @@
     margin-bottom: 18px;
   }
 
-  #dropzone {
+  #browseBtn {
+    width: 100%;
+    padding: 20px;
+    background: var(--bg);
+    color: var(--text);
     border: 2px dashed var(--border);
     border-radius: 10px;
-    padding: 48px 24px;
-    text-align: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s;
   }
 
-  #dropzone.dragover { border-color: var(--accent); background: var(--accent-dim); }
-  #dropzone.has-file { border-style: solid; border-color: var(--accent); background: var(--accent-dim); }
-  #dropzone .icon { font-size: 2.5rem; margin-bottom: 12px; display: block; }
-  #dropzone .label { font-size: 1rem; color: var(--text); font-weight: 500; }
-  #dropzone .sublabel { font-size: 0.8rem; color: var(--text-dim); margin-top: 6px; }
-  #dropzone .file-name {
-    font-family: 'Space Mono', monospace;
-    font-size: 0.85rem;
+  #browseBtn:hover {
+    border-color: var(--accent);
     color: var(--accent);
-    margin-top: 8px;
-    word-break: break-all;
+  }
+
+  #browseBtn.has-file {
+    border-style: solid;
+    border-color: var(--accent);
+    color: var(--accent);
   }
 
   #fileInput { display: none; }
@@ -155,7 +157,6 @@
 
   input[type="number"]:focus { border-color: var(--accent); }
 
-  /* Size estimator */
   #sizeEstimator {
     display: none;
     margin-top: 20px;
@@ -220,7 +221,6 @@
     margin-top: 8px;
   }
 
-  /* Convert */
   #convertBtn {
     width: 100%;
     padding: 16px;
@@ -281,7 +281,6 @@
     margin-top: 12px;
   }
 
-  /* Result */
   #resultCard { display: none; }
 
   .result-preview {
@@ -326,7 +325,6 @@
 
   #downloadBtn:hover { background: var(--accent-dim); box-shadow: 0 0 16px var(--accent-dim); }
 
-  /* History */
   .history-list {
     margin-top: 16px;
     border-top: 1px solid var(--border);
@@ -400,17 +398,13 @@
 
 <header>
   <h1>vid2gif</h1>
-  <p>drop a video. get a gif.</p>
+  <p>by blake</p>
 </header>
 
 <div class="card">
   <h2>01 — Input</h2>
-  <div id="dropzone" onclick="document.getElementById('fileInput').click()">
-    <span class="icon">🎬</span>
-    <div class="label">Drop video here</div>
-    <div class="sublabel">or click to browse</div>
-    <div class="file-name" id="fileName"></div>
-  </div>
+  <button id="browseBtn" onclick="document.getElementById('fileInput').click()">Browse for video</button>
+  <div id="fileName" style="font-family:'Space Mono',monospace;font-size:0.85rem;color:var(--accent);margin-top:14px;word-break:break-all;"></div>
   <input type="file" id="fileInput" accept="video/*">
 </div>
 
@@ -495,35 +489,25 @@ let resultFilename = null;
 let currentResultMeta = null;
 let conversionHistory = [];
 
-const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('fileInput');
 
-dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
-dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
-dropzone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropzone.classList.remove('dragover');
-  const file = e.dataTransfer.files[0];
-  if (file) setFile(file);
-});
 fileInput.addEventListener('change', e => { if (e.target.files[0]) setFile(e.target.files[0]); });
 
 function setFile(file) {
   selectedFile = file;
   videoDuration = null;
 
-  dropzone.classList.add('has-file');
-  dropzone.querySelector('.icon').textContent = '✅';
-  dropzone.querySelector('.label').textContent = 'Video loaded';
-  dropzone.querySelector('.sublabel').textContent = formatSize(file.size);
-  document.getElementById('fileName').textContent = file.name;
+  const browseBtn = document.getElementById('browseBtn');
+  browseBtn.classList.add('has-file');
+  browseBtn.textContent = '✅ ' + file.name;
+
+  document.getElementById('fileName').textContent = formatSize(file.size);
   document.getElementById('errorBox').style.display = 'none';
 
   const btn = document.getElementById('convertBtn');
   btn.disabled = false;
   btn.textContent = 'Convert to GIF →';
 
-  // Probe duration via object URL
   const url = URL.createObjectURL(file);
   const vid = document.createElement('video');
   vid.preload = 'metadata';
@@ -571,9 +555,8 @@ function updateEstimate() {
     return;
   }
 
-  // Estimate: palette GIFs ~0.5 bits/pixel/frame, height estimated from 16:9
   const height = Math.round(width * 9 / 16);
-  const estimatedBytes = (width * height * fps * effectiveDuration * 0.5) / 8;
+  const estimatedBytes = (width * height * fps * effectiveDuration * 4.5) / 8;
   const estimatedMB = estimatedBytes / (1024 * 1024);
 
   const sizeValue = document.getElementById('sizeValue');
@@ -582,25 +565,24 @@ function updateEstimate() {
 
   sizeValue.textContent = estimatedMB.toFixed(1) + ' MB';
 
-  const pct = Math.min((estimatedMB / 10) * 100, 100);
+  const pct = Math.min((estimatedMB / 40) * 100, 100);
   sizeBar.style.width = pct + '%';
 
-  // Reset classes
   sizeValue.className = 'size-value';
   sizeBar.className = 'size-bar';
 
-  if (estimatedMB <= 5) {
+  if (estimatedMB <= 10) {
     sizeValue.classList.add('green');
     sizeBar.classList.add('green');
-    sizeNote.textContent = '✓ Well under 10 MB — good to go';
-  } else if (estimatedMB <= 10) {
+    sizeNote.textContent = '✓ Under 10 MB — good to go';
+  } else if (estimatedMB <= 25) {
     sizeValue.classList.add('yellow');
     sizeBar.classList.add('yellow');
-    sizeNote.textContent = '⚠ Close to 10 MB — consider lower FPS or width';
+    sizeNote.textContent = '⚠ Getting large — consider lower FPS or width';
   } else {
     sizeValue.classList.add('red');
     sizeBar.classList.add('red');
-    sizeNote.textContent = '✗ Likely over 10 MB — reduce FPS, width, or duration';
+    sizeNote.textContent = '✗ Very large — reduce FPS, width, or duration';
   }
 }
 
@@ -637,7 +619,6 @@ async function convert() {
       return;
     }
 
-    // Archive previous result to history
     if (resultFilename && currentResultMeta) {
       conversionHistory.unshift({ filename: resultFilename, ...currentResultMeta });
       renderHistory();
