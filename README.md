@@ -27,15 +27,3 @@ Add as a custom Docker container:
   - Recommended: 10fps, 480px for most use cases
   - Use "Duration" to clip long videos before converting
 ```
-
----
-
-Repo structure should be:
-```
-ffmpeg-gif-generator/
-├── Dockerfile
-├── requirements.txt
-├── app.py
-├── README.md
-└── static/
-    └── index.html
