@@ -1,4 +1,4 @@
-# vid2gif
+# ffmpeg-gif-generator
 
 Drop a video, get a GIF. Self-hosted Docker container with a clean web UI.
 
