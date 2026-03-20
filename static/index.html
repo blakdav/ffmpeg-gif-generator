@@ -496,11 +496,12 @@ fileInput.addEventListener('change', e => { if (e.target.files[0]) setFile(e.tar
 function setFile(file) {
   selectedFile = file;
   videoDuration = null;
+  trimStart = 0;
+  trimEnd = 0;
 
   const browseBtn = document.getElementById('browseBtn');
   browseBtn.classList.add('has-file');
   browseBtn.textContent = '✅ ' + file.name;
-
   document.getElementById('fileName').textContent = formatSize(file.size);
   document.getElementById('errorBox').style.display = 'none';
 
@@ -514,7 +515,14 @@ function setFile(file) {
   vid.src = url;
   vid.onloadedmetadata = () => {
     videoDuration = isFinite(vid.duration) ? vid.duration : null;
+    // bytes per second of source video as complexity proxy
+    window.inputBytesPerSec = videoDuration ? (file.size / videoDuration) : null;
     URL.revokeObjectURL(url);
+    if (videoDuration) {
+      trimStart = 0;
+      trimEnd = videoDuration;
+      initTrimSlider();
+    }
     document.getElementById('sizeEstimator').style.display = 'block';
     updateEstimate();
   };
@@ -541,22 +549,32 @@ function updateEstimate() {
 
   const fps = parseInt(document.getElementById('fpsRange').value);
   const width = parseInt(document.getElementById('widthRange').value);
-  const startTime = parseFloat(document.getElementById('startTime').value) || 0;
-  const durationInput = parseFloat(document.getElementById('duration').value);
+  const effectiveDuration = videoDuration ? (trimEnd - trimStart) : null;
 
-  let effectiveDuration;
-  if (durationInput > 0) {
-    effectiveDuration = durationInput;
-  } else if (videoDuration) {
-    effectiveDuration = Math.max(0, videoDuration - startTime);
-  } else {
+  if (!effectiveDuration) {
     document.getElementById('sizeValue').textContent = '?';
-    document.getElementById('sizeNote').textContent = 'Enter a duration to estimate size';
+    document.getElementById('sizeNote').textContent = 'Duration unknown — estimate unavailable';
     return;
   }
 
+  // Scale bits/pixel/frame constant based on input video bitrate
+  // Low bitrate (simple content) ~500KB/s, high bitrate (complex) ~8MB/s+
+  const LOW_BPS = 500_000;
+  const HIGH_BPS = 8_000_000;
+  const LOW_CONST = 2.0;
+  const HIGH_CONST = 6.5;
+
+  let complexityFactor = 0.5; // default if unknown
+  if (window.inputBytesPerSec) {
+    complexityFactor = Math.max(0, Math.min(1,
+      (window.inputBytesPerSec - LOW_BPS) / (HIGH_BPS - LOW_BPS)
+    ));
+  }
+
+  const bitsPerPixelPerFrame = LOW_CONST + (HIGH_CONST - LOW_CONST) * complexityFactor;
+
   const height = Math.round(width * 9 / 16);
-  const estimatedBytes = (width * height * fps * effectiveDuration * 4.5) / 8;
+  const estimatedBytes = (width * height * fps * effectiveDuration * bitsPerPixelPerFrame) / 8;
   const estimatedMB = estimatedBytes / (1024 * 1024);
 
   const sizeValue = document.getElementById('sizeValue');
@@ -564,7 +582,6 @@ function updateEstimate() {
   const sizeNote = document.getElementById('sizeNote');
 
   sizeValue.textContent = estimatedMB.toFixed(1) + ' MB';
-
   const pct = Math.min((estimatedMB / 40) * 100, 100);
   sizeBar.style.width = pct + '%';
 
@@ -582,7 +599,7 @@ function updateEstimate() {
   } else {
     sizeValue.classList.add('red');
     sizeBar.classList.add('red');
-    sizeNote.textContent = '✗ Very large — reduce FPS, width, or duration';
+    sizeNote.textContent = '✗ Very large — reduce FPS, width, or clip length';
   }
 }
 
