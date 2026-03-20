@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>vid2gif</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0e0e0f;
+    --surface: #181819;
+    --border: #2a2a2d;
+    --accent: #00ff88;
+    --accent-dim: #00ff8822;
+    --accent-mid: #00ff8855;
+    --text: #e8e8e8;
+    --text-dim: #666;
+    --error: #ff4466;
+    --warning: #ffaa00;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px 60px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  header h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: 2.4rem;
+    font-weight: 700;
+    letter-spacing: -1px;
+    color: var(--accent);
+    text-shadow: 0 0 30px var(--accent-mid);
+  }
+
+  header p {
+    color: var(--text-dim);
+    margin-top: 6px;
+    font-size: 0.9rem;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    width: 100%;
+    max-width: 600px;
+    margin-bottom: 20px;
+  }
+
+  .card h2 {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 18px;
+  }
+
+  #dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #dropzone.dragover {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  #dropzone.has-file {
+    border-style: solid;
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  #dropzone .icon { font-size: 2.5rem; margin-bottom: 12px; display: block; }
+  #dropzone .label { font-size: 1rem; color: var(--text); font-weight: 500; }
+  #dropzone .sublabel { font-size: 0.8rem; color: var(--text-dim); margin-top: 6px; }
+  #dropzone .file-name {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--accent);
+    margin-top: 8px;
+    word-break: break-all;
+  }
+
+  #fileInput { display: none; }
+
+  .params-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .param-group { display: flex; flex-direction: column; gap: 6px; }
+  .param-group.full { grid-column: 1 / -1; }
+
+  label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .input-row { display: flex; align-items: center; gap: 10px; }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    flex: 1;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent-mid);
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+  .value-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--accent);
+    min-width: 48px;
+    text-align: right;
+  }
+
+  input[type="number"], input[type="text"] {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    padding: 8px 12px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input[type="number"]:focus, input[type="text"]:focus { border-color: var(--accent); }
+
+  #convertBtn {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  #convertBtn:hover:not(:disabled) {
+    background: #00ffaa;
+    box-shadow: 0 0 20px var(--accent-mid);
+    transform: translateY(-1px);
+  }
+
+  #convertBtn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  #progressWrap { display: none; flex-direction: column; gap: 10px; }
+
+  .progress-bar-outer {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .progress-bar-inner {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.3s;
+    box-shadow: 0 0 10px var(--accent-mid);
+    animation: progressPulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes progressPulse {
+    0%, 100% { box-shadow: 0 0 10px var(--accent-mid); }
+    50% { box-shadow: 0 0 20px var(--accent); }
+  }
+
+  .progress-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    text-align: center;
+  }
+
+  #resultCard { display: none; }
+
+  .result-preview {
+    border-radius: 8px;
+    overflow: hidden;
+    background: #000;
+    text-align: center;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+  }
+
+  .result-preview img { max-width: 100%; max-height: 300px; display: block; margin: 0 auto; }
+
+  .result-meta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+
+  .meta-chip {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+  }
+
+  .meta-chip span { color: var(--accent); }
+
+  #downloadBtn {
+    width: 100%;
+    padding: 14px;
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  #downloadBtn:hover { background: var(--accent-dim); box-shadow: 0 0 16px var(--accent-dim); }
+
+  #resetBtn {
+    width: 100%;
+    padding: 10px;
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 10px;
+  }
+
+  #resetBtn:hover { color: var(--text); border-color: #444; }
+
+  #errorBox {
+    display: none;
+    background: #1a0810;
+    border: 1px solid var(--error);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--error);
+    margin-top: 12px;
+  }
+
+  .formats-note {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-top: -8px;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.05em;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>vid2gif</h1>
+  <p>drop a video. get a gif.</p>
+</header>
+
+<div class="card">
+  <h2>01 — Input</h2>
+  <div id="dropzone" onclick="document.getElementById('fileInput').click()">
+    <span class="icon">🎬</span>
+    <div class="label">Drop video here</div>
+    <div class="sublabel">or click to browse</div>
+    <div class="file-name" id="fileName"></div>
+  </div>
+  <input type="file" id="fileInput" accept="video/*">
+</div>
+
+<p class="formats-note">mp4 · mov · avi · mkv · webm · wmv · flv · m4v</p>
+<br>
+
+<div class="card">
+  <h2>02 — Parameters</h2>
+  <div class="params-grid">
+
+    <div class="param-group full">
+      <label>FPS — Frames per second</label>
+      <div class="input-row">
+        <input type="range" id="fpsRange" min="1" max="30" value="10" oninput="sync('fps', this.value)">
+        <div class="value-badge" id="fpsVal">10 fps</div>
+      </div>
+    </div>
+
+    <div class="param-group full">
+      <label>Width — Output width (px)</label>
+      <div class="input-row">
+        <input type="range" id="widthRange" min="120" max="960" step="40" value="480" oninput="sync('width', this.value)">
+        <div class="value-badge" id="widthVal">480 px</div>
+      </div>
+    </div>
+
+    <div class="param-group">
+      <label>Start time (seconds)</label>
+      <input type="number" id="startTime" value="0" min="0" step="0.1" placeholder="0">
+    </div>
+
+    <div class="param-group">
+      <label>Duration (seconds)</label>
+      <input type="number" id="duration" value="" min="0.1" step="0.1" placeholder="full">
+    </div>
+
+  </div>
+</div>
+
+<div class="card">
+  <h2>03 — Convert</h2>
+  <button id="convertBtn" disabled onclick="convert()">Select a video first</button>
+
+  <div id="progressWrap">
+    <div class="progress-bar-outer">
+      <div class="progress-bar-inner" id="progressBar"></div>
+    </div>
+    <div class="progress-label" id="progressLabel">Uploading...</div>
+  </div>
+
+  <div id="errorBox"></div>
+</div>
+
+<div class="card" id="resultCard">
+  <h2>04 — Result</h2>
+  <div class="result-preview">
+    <img id="gifPreview" src="" alt="GIF preview">
+  </div>
+  <div class="result-meta" id="resultMeta"></div>
+  <button id="downloadBtn" onclick="downloadGif()">↓ Download GIF</button>
+  <button id="resetBtn" onclick="reset()">Convert another video</button>
+</div>
+
+<script>
+let selectedFile = null;
+let resultFilename = null;
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+
+dropzone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropzone.classList.add('dragover');
+});
+
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) setFile(file);
+});
+
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) setFile(e.target.files[0]);
+});
+
+function setFile(file) {
+  selectedFile = file;
+  dropzone.classList.add('has-file');
+  dropzone.querySelector('.icon').textContent = '✅';
+  dropzone.querySelector('.label').textContent = 'Video loaded';
+  dropzone.querySelector('.sublabel').textContent = formatSize(file.size);
+  document.getElementById('fileName').textContent = file.name;
+  const btn = document.getElementById('convertBtn');
+  btn.disabled = false;
+  btn.textContent = 'Convert to GIF →';
+}
+
+function formatSize(bytes) {
+  if (bytes > 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  return (bytes / 1024).toFixed(0) + ' KB';
+}
+
+function sync(type, val) {
+  if (type === 'fps') {
+    document.getElementById('fpsVal').textContent = val + ' fps';
+  } else {
+    document.getElementById('widthVal').textContent = val + ' px';
+  }
+}
+
+async function convert() {
+  if (!selectedFile) return;
+
+  const btn = document.getElementById('convertBtn');
+  const progressWrap = document.getElementById('progressWrap');
+  const errorBox = document.getElementById('errorBox');
+
+  errorBox.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Converting...';
+  progressWrap.style.display = 'flex';
+  animateProgress();
+
+  const formData = new FormData();
+  formData.append('file', selectedFile);
+  formData.append('fps', document.getElementById('fpsRange').value);
+  formData.append('width', document.getElementById('widthRange').value);
+  formData.append('start_time', document.getElementById('startTime').value || '0');
+  const dur = document.getElementById('duration').value;
+  if (dur) formData.append('duration', dur);
+
+  try {
+    const resp = await fetch('/convert', { method: 'POST', body: formData });
+    const data = await resp.json();
+
+    stopProgress();
+
+    if (!resp.ok || data.error) {
+      showError(data.error || 'Conversion failed');
+      btn.disabled = false;
+      btn.textContent = 'Try again →';
+      return;
+    }
+
+    resultFilename = data.filename;
+    showResult(data);
+
+  } catch (err) {
+    stopProgress();
+    showError('Request failed: ' + err.message);
+    btn.disabled = false;
+    btn.textContent = 'Try again →';
+  }
+}
+
+let progressInterval = null;
+let progressVal = 0;
+
+function animateProgress() {
+  progressVal = 0;
+  document.getElementById('progressBar').style.width = '0%';
+  document.getElementById('progressLabel').textContent = 'Uploading...';
+  progressInterval = setInterval(() => {
+    if (progressVal < 30) {
+      progressVal += 2;
+      document.getElementById('progressLabel').textContent = 'Uploading...';
+    } else if (progressVal < 85) {
+      progressVal += 0.4;
+      document.getElementById('progressLabel').textContent = 'Generating palette & converting...';
+    } else if (progressVal < 95) {
+      progressVal += 0.1;
+      document.getElementById('progressLabel').textContent = 'Almost done...';
+    }
+    document.getElementById('progressBar').style.width = progressVal + '%';
+  }, 80);
+}
+
+function stopProgress() {
+  clearInterval(progressInterval);
+  document.getElementById('progressBar').style.width = '100%';
+  setTimeout(() => {
+    document.getElementById('progressWrap').style.display = 'none';
+  }, 400);
+}
+
+function showResult(data) {
+  document.getElementById('convertBtn').textContent = '✓ Done';
+
+  const resultCard = document.getElementById('resultCard');
+  resultCard.style.display = 'block';
+
+  document.getElementById('gifPreview').src = '/preview/' + data.filename + '?t=' + Date.now();
+
+  const fps = document.getElementById('fpsRange').value;
+  const width = document.getElementById('widthRange').value;
+  document.getElementById('resultMeta').innerHTML = `
+    <div class="meta-chip">size <span>${data.size_mb} MB</span></div>
+    <div class="meta-chip">fps <span>${fps}</span></div>
+    <div class="meta-chip">width <span>${width}px</span></div>
+  `;
+
+  resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function downloadGif() {
+  if (resultFilename) window.location.href = '/download/' + resultFilename;
+}
+
+function showError(msg) {
+  const box = document.getElementById('errorBox');
+  box.textContent = '⚠ ' + msg;
+  box.style.display = 'block';
+}
+
+function reset() {
+  selectedFile = null;
+  resultFilename = null;
+  document.getElementById('resultCard').style.display = 'none';
+  dropzone.classList.remove('has-file');
+  dropzone.querySelector('.icon').textContent = '🎬';
+  dropzone.querySelector('.label').textContent = 'Drop video here';
+  dropzone.querySelector('.sublabel').textContent = 'or click to browse';
+  document.getElementById('fileName').textContent = '';
+  document.getElementById('errorBox').style.display = 'none';
+  const btn = document.getElementById('convertBtn');
+  btn.disabled = true;
+  btn.textContent = 'Select a video first';
+  fileInput.value = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
