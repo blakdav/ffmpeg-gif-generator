@@ -13,7 +13,7 @@ Drop a video, get a GIF. Self-hosted Docker container with a clean web UI.
 ## Quick start
 ```bash
 git clone <your-repo>
-cd vid2gif
+cd ffmpeg-gif-generator
 docker compose up -d --build
 ```
 
@@ -24,7 +24,7 @@ Then open `http://localhost:5757`
 Add as a custom Docker container:
 - **Image**: build locally or push to Docker Hub
 - **Port**: 5757 → 5000
-- **Path**: `/mnt/user/appdata/vid2gif/output` → `/app/output`
+- **Path**: `/mnt/user/appdata/ffmpeg-gif-generator/output` → `/app/output`
 
 ## Notes
 
@@ -39,9 +39,8 @@ Add as a custom Docker container:
 
 Repo structure should be:
 ```
-vid2gif/
+ffmpeg-gif-generator/
 ├── Dockerfile
-├── docker-compose.yml
 ├── requirements.txt
 ├── app.py
 ├── README.md
