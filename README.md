@@ -10,13 +10,6 @@ Drop a video, get a GIF. Self-hosted Docker container with a clean web UI.
 - High-quality GIF using FFmpeg 2-pass palette generation
 - Live preview + download in browser
 
-## Quick start
-```bash
-git clone <your-repo>
-cd ffmpeg-gif-generator
-docker compose up -d --build
-```
-
 Then open `http://localhost:5757`
 
 ## Unraid
