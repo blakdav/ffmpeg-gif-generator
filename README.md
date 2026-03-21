@@ -6,7 +6,7 @@ A self-hosted web app for converting video clips to GIFs. Built with Flask and F
 
 - Browse and select any common video format (mp4, mov, avi, mkv, webm, wmv, flv, m4v)
 - Adjustable FPS (1–30) and output width (120–960px)
-- Visual trim slider with dual handles to set start and end points — supports manual timestamp input in h:mm:ss format for precise control on long videos
+- Visual trim slider with dual handles to set start and end points. Supports manual timestamp input in h:mm:ss format for precise control on long videos
 - Live output size estimator that accounts for source video complexity via input bitrate
 - High quality GIF output using FFmpeg 2-pass palette generation
 - Inline GIF preview with one-click download
