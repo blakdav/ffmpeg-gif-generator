@@ -11,7 +11,7 @@ A self-hosted web app for converting video clips to GIFs. Built with Flask and F
 - Visual trim slider with dual handles to set start and end points. Supports manual timestamp input in h:mm:ss format for precise control on long videos
 - Live output size estimator that accounts for source video complexity via input bitrate, and learns from previous conversions of the same file for improved accuracy
 - High quality GIF output using FFmpeg 2-pass palette generation
-- GIFs are never saved to the server — delivered directly to the browser and downloaded client-side only
+- GIFs are never saved to the server; delivered directly to the browser and downloaded client-side only
 - Inline GIF preview with one-click download
 - Sequential conversions without page refresh, with a history of previous conversions in the session
 
