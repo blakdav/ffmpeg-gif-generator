@@ -45,14 +45,6 @@
     text-shadow: 0 0 30px var(--accent-mid);
   }
 
-  header p {
-    color: var(--text-dim);
-    margin-top: 6px;
-    font-size: 0.9rem;
-    font-weight: 300;
-    letter-spacing: 0.05em;
-  }
-
   .card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -215,9 +207,7 @@
     flex: 1;
   }
 
-  .trim-input-group label {
-    font-size: 0.65rem;
-  }
+  .trim-input-group label { font-size: 0.65rem; }
 
   .trim-input-group input {
     background: var(--bg);
@@ -488,7 +478,6 @@
 
 <header>
   <h1>vid2gif</h1>
-  <p>by blake</p>
 </header>
 
 <div class="card">
@@ -594,6 +583,8 @@ let trimEnd = 0;
 let activeDrag = null;
 let resultFilename = null;
 let currentResultMeta = null;
+let currentBlobUrl = null;
+let currentFileName = null;
 let conversionHistory = [];
 
 const fileInput = document.getElementById('fileInput');
@@ -643,7 +634,6 @@ function formatSize(bytes) {
   return (bytes / 1024).toFixed(0) + ' KB';
 }
 
-// Format seconds as h:mm:ss or m:ss depending on length
 function formatTime(secs) {
   const h = Math.floor(secs / 3600);
   const m = Math.floor((secs % 3600) / 60);
@@ -652,11 +642,9 @@ function formatTime(secs) {
   return m + ':' + s;
 }
 
-// Parse h:mm:ss or m:ss or raw seconds into seconds
 function parseTime(str) {
   str = str.trim();
   if (!str) return null;
-  // Raw number
   if (/^\d+(\.\d+)?$/.test(str)) return parseFloat(str);
   const parts = str.split(':').map(Number);
   if (parts.some(isNaN)) return null;
@@ -680,7 +668,6 @@ function updateTrimUI() {
   document.getElementById('trimRange').style.left = (pctStart * 100) + '%';
   document.getElementById('trimRange').style.width = ((pctEnd - pctStart) * 100) + '%';
 
-  // Update text inputs only if not currently focused
   const inStart = document.getElementById('inputStart');
   const inEnd = document.getElementById('inputEnd');
   if (document.activeElement !== inStart) inStart.value = formatTime(trimStart);
@@ -711,16 +698,9 @@ function onManualInput(which, val) {
 }
 
 function onManualBlur(which, val) {
-  // On blur, reformat the value cleanly
-  const secs = parseTime(val);
   const input = document.getElementById(which === 'start' ? 'inputStart' : 'inputEnd');
-  if (secs !== null && secs >= 0 && secs <= videoDuration) {
-    input.value = formatTime(which === 'start' ? trimStart : trimEnd);
-    input.classList.remove('invalid');
-  } else {
-    input.value = formatTime(which === 'start' ? trimStart : trimEnd);
-    input.classList.remove('invalid');
-  }
+  input.value = formatTime(which === 'start' ? trimStart : trimEnd);
+  input.classList.remove('invalid');
 }
 
 document.addEventListener('mousedown', e => {
@@ -778,19 +758,27 @@ function updateEstimate() {
     return;
   }
 
-  const LOW_BPS = 500_000;
-  const HIGH_BPS = 8_000_000;
-  const LOW_CONST = 2.0;
-  const HIGH_CONST = 6.5;
+  let bitsPerPixelPerFrame;
+  let estimateSource = 'formula';
 
-  let complexityFactor = 0.5;
-  if (window.inputBytesPerSec) {
-    complexityFactor = Math.max(0, Math.min(1,
-      (window.inputBytesPerSec - LOW_BPS) / (HIGH_BPS - LOW_BPS)
-    ));
+  const key = selectedFile.name + '_' + selectedFile.size;
+  if (window.measuredConstants && window.measuredConstants[key]) {
+    bitsPerPixelPerFrame = window.measuredConstants[key].const;
+    estimateSource = 'measured';
+  } else {
+    const LOW_BPS = 500_000;
+    const HIGH_BPS = 8_000_000;
+    const LOW_CONST = 2.0;
+    const HIGH_CONST = 6.5;
+    let complexityFactor = 0.5;
+    if (window.inputBytesPerSec) {
+      complexityFactor = Math.max(0, Math.min(1,
+        (window.inputBytesPerSec - LOW_BPS) / (HIGH_BPS - LOW_BPS)
+      ));
+    }
+    bitsPerPixelPerFrame = LOW_CONST + (HIGH_CONST - LOW_CONST) * complexityFactor;
   }
 
-  const bitsPerPixelPerFrame = LOW_CONST + (HIGH_CONST - LOW_CONST) * complexityFactor;
   const height = Math.round(width * 9 / 16);
   const estimatedBytes = (width * height * fps * effectiveDuration * bitsPerPixelPerFrame) / 8;
   const estimatedMB = estimatedBytes / (1024 * 1024);
@@ -809,15 +797,21 @@ function updateEstimate() {
   if (estimatedMB <= 10) {
     sizeValue.classList.add('green');
     sizeBar.classList.add('green');
-    sizeNote.textContent = '✓ Under 10 MB — good to go';
+    sizeNote.textContent = estimateSource === 'measured'
+      ? '✓ Under 10 MB — calibrated from your previous conversion'
+      : '✓ Under 10 MB — good to go';
   } else if (estimatedMB <= 25) {
     sizeValue.classList.add('yellow');
     sizeBar.classList.add('yellow');
-    sizeNote.textContent = '⚠ Getting large — consider lower FPS or width';
+    sizeNote.textContent = estimateSource === 'measured'
+      ? '⚠ Getting large — calibrated from your previous conversion'
+      : '⚠ Getting large — consider lower FPS or width';
   } else {
     sizeValue.classList.add('red');
     sizeBar.classList.add('red');
-    sizeNote.textContent = '✗ Very large — reduce FPS, width, or clip length';
+    sizeNote.textContent = estimateSource === 'measured'
+      ? '✗ Very large — calibrated from your previous conversion'
+      : '✗ Very large — reduce FPS, width, or clip length';
   }
 }
 
@@ -845,29 +839,45 @@ async function convert() {
 
   try {
     const resp = await fetch('/convert', { method: 'POST', body: formData });
-    const data = await resp.json();
-    stopProgress();
 
-    if (!resp.ok || data.error) {
+    if (!resp.ok) {
+      const data = await resp.json();
+      stopProgress();
       showError(data.error || 'Conversion failed');
       btn.disabled = false;
       btn.textContent = 'Convert to GIF →';
       return;
     }
 
+    const sizeMB = parseFloat(resp.headers.get('X-File-Size-MB') || '0');
+    const fileName = resp.headers.get('X-File-Name') || 'output.gif';
+    const blob = await resp.blob();
+    const blobUrl = URL.createObjectURL(blob);
+
+    stopProgress();
+
+    if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+
     if (resultFilename && currentResultMeta) {
-      conversionHistory.unshift({ filename: resultFilename, ...currentResultMeta });
+      conversionHistory.unshift({
+        blobUrl: currentBlobUrl,
+        filename: resultFilename,
+        ...currentResultMeta
+      });
       renderHistory();
     }
 
-    resultFilename = data.filename;
+    currentBlobUrl = blobUrl;
+    currentFileName = fileName;
+    resultFilename = fileName;
     currentResultMeta = {
-      sizeMB: data.size_mb,
+      sizeMB,
       fps: document.getElementById('fpsRange').value,
       width: document.getElementById('widthRange').value
     };
 
-    showResult(data);
+    showResult(sizeMB, blobUrl);
+    calcAndStoreMeasured(sizeMB);
     btn.disabled = false;
     btn.textContent = 'Convert to GIF →';
 
@@ -877,6 +887,19 @@ async function convert() {
     btn.disabled = false;
     btn.textContent = 'Convert to GIF →';
   }
+}
+
+function calcAndStoreMeasured(actualMB) {
+  if (!selectedFile || !videoDuration) return;
+  const fps = parseInt(currentResultMeta.fps);
+  const width = parseInt(currentResultMeta.width);
+  const duration = trimEnd - trimStart;
+  const height = Math.round(width * 9 / 16);
+  const actualBytes = actualMB * 1024 * 1024;
+  const measuredConst = (actualBytes * 8) / (width * height * fps * duration);
+  const key = selectedFile.name + '_' + selectedFile.size;
+  if (!window.measuredConstants) window.measuredConstants = {};
+  window.measuredConstants[key] = { const: measuredConst, fps, width, duration };
 }
 
 let progressInterval = null;
@@ -900,12 +923,12 @@ function stopProgress() {
   setTimeout(() => { document.getElementById('progressWrap').style.display = 'none'; }, 400);
 }
 
-function showResult(data) {
+function showResult(sizeMB, blobUrl) {
   const resultCard = document.getElementById('resultCard');
   resultCard.style.display = 'block';
-  document.getElementById('gifPreview').src = '/preview/' + data.filename + '?t=' + Date.now();
+  document.getElementById('gifPreview').src = blobUrl;
   document.getElementById('resultMeta').innerHTML = `
-    <div class="meta-chip">actual size <span>${data.size_mb} MB</span></div>
+    <div class="meta-chip">actual size <span>${sizeMB} MB</span></div>
     <div class="meta-chip">fps <span>${currentResultMeta.fps}</span></div>
     <div class="meta-chip">width <span>${currentResultMeta.width}px</span></div>
   `;
@@ -919,13 +942,17 @@ function renderHistory() {
     <div class="history-item">
       <div class="hi-name">${item.filename}</div>
       <div class="hi-meta">${item.fps} fps · ${item.width}px · ${item.sizeMB} MB</div>
-      <a class="hi-dl" href="/download/${item.filename}">↓</a>
+      <a class="hi-dl" href="${item.blobUrl}" download="${item.filename}">↓</a>
     </div>
   `).join('');
 }
 
 function downloadGif() {
-  if (resultFilename) window.location.href = '/download/' + resultFilename;
+  if (!currentBlobUrl) return;
+  const a = document.createElement('a');
+  a.href = currentBlobUrl;
+  a.download = currentFileName || 'output.gif';
+  a.click();
 }
 
 function showError(msg) {
