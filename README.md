@@ -1,29 +1,32 @@
-# ffmpeg-gif-generator
+# vid2gif
 
-Drop a video, get a GIF. Self-hosted Docker container with a clean web UI.
+A self-hosted web app for converting video clips to GIFs. Built with Flask and FFmpeg, runs in Docker.
 
 ## Features
-- Drag & drop any common video format (mp4, mov, avi, mkv, webm, wmv, flv, m4v)
-- Adjustable FPS (1–30)
-- Adjustable output width (120–960px)
-- Trim by start time + duration
-- High-quality GIF using FFmpeg 2-pass palette generation
-- Live preview + download in browser
 
-Then open `http://localhost:5757`
+- Browse and select any common video format (mp4, mov, avi, mkv, webm, wmv, flv, m4v)
+- Adjustable FPS (1–30) and output width (120–960px)
+- Visual trim slider with dual handles to set start and end points — supports manual timestamp input in h:mm:ss format for precise control on long videos
+- Live output size estimator that accounts for source video complexity via input bitrate
+- High quality GIF output using FFmpeg 2-pass palette generation
+- Inline GIF preview with one-click download
+- Sequential conversions without page refresh, with a history of previous conversions in the session
 
-## Unraid
+## Usage
 
-Add as a custom Docker container:
-- **Image**: build locally or push to Docker Hub
-- **Port**: 5757 → 5000
-- **Path**: `/mnt/user/appdata/ffmpeg-gif-generator/output` → `/app/output`
+Point your browser at the app, browse for a video, adjust your parameters, trim your clip, and hit Convert. The estimated output size updates live as you adjust settings — aim to keep it under 10 MB for easy sharing.
 
-## Notes
+## Security
 
-- Converted GIFs are saved to `./output/` on the host (bind mount)
-- Uploads are temp files — cleaned up after each conversion
-- Large videos at high FPS + large width = big GIFs and slow conversion
-  - Recommended: 10fps, 480px for most use cases
-  - Use "Duration" to clip long videos before converting
-```
+**This app has no authentication, no authorization, and no rate limiting.** It is designed exclusively for use on a trusted local network or behind a VPN.
+
+- Do not expose this to the public internet
+- Anyone with network access to the app can upload files and trigger FFmpeg conversions on your server
+- No input sanitization beyond basic file extension checking
+
+## Stack
+
+- **Backend**: Python / Flask
+- **Conversion**: FFmpeg (2-pass palette GIF encoding)
+- **Frontend**: Vanilla HTML/CSS/JS, no dependencies
+- **Container**: Docker
