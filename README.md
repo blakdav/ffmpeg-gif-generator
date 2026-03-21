@@ -25,7 +25,7 @@ Point your browser at the app, browse for a video, adjust your parameters, trim 
 
 - Do not expose this to the public internet
 - Anyone with network access to the app can upload files and trigger FFmpeg conversions on your server
-- No input sanitization beyond basic file extension checking is guaranteed
+- No input sanitization beyond basic file extension checking
 
 ## Stack
 
