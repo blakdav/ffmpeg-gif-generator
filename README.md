@@ -1,6 +1,6 @@
 # vid2gif
 
-A self-hosted web app for converting video clips to GIFs. Built with Flask and FFmpeg, runs in Docker.
+A self-hosted web app for converting video clips to GIFs. Built with Flask and FFmpeg, runs in Docker. File size estimator for use in sharing GIFs to platforms with file size limits, such as Discord and Github.
 
 ![Replay_2026-03-19_22-18-16_f56fe458](https://github.com/user-attachments/assets/1d29efcc-d6d9-4537-9a4e-498bd2ad09a1)
 
