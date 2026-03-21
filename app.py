@@ -1,17 +1,16 @@
 import os
 import subprocess
 import uuid
+import io
 from flask import Flask, request, jsonify, send_file, send_from_directory
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__, static_folder='static')
 
 UPLOAD_FOLDER = '/app/uploads'
-OUTPUT_FOLDER = '/app/output'
 ALLOWED_EXTENSIONS = {'mp4', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv', 'm4v'}
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -50,8 +49,7 @@ def convert():
     base_name = os.path.splitext(original_name)[0]
     input_path = os.path.join(UPLOAD_FOLDER, f"{uid}_{original_name}")
     palette_path = os.path.join(UPLOAD_FOLDER, f"{uid}_palette.png")
-    output_filename = f"{base_name}_{uid[:8]}.gif"
-    output_path = os.path.join(OUTPUT_FOLDER, output_filename)
+    output_path = os.path.join(UPLOAD_FOLDER, f"{uid}_output.gif")
 
     file.save(input_path)
 
@@ -81,39 +79,35 @@ def convert():
         if result.returncode != 0:
             return jsonify({'error': f'GIF conversion failed: {result.stderr[-500:]}'}), 500
 
-        file_size = os.path.getsize(output_path)
-        return jsonify({
-            'success': True,
-            'filename': output_filename,
-            'size_mb': round(file_size / (1024 * 1024), 2)
-        })
+        # Read GIF into memory
+        with open(output_path, 'rb') as f:
+            gif_data = f.read()
+
+        size_mb = round(len(gif_data) / (1024 * 1024), 2)
+        output_filename = f"{base_name}.gif"
+
+        return send_file(
+            io.BytesIO(gif_data),
+            mimetype='image/gif',
+            as_attachment=False,
+            download_name=output_filename,
+            headers={
+                'X-File-Size-MB': str(size_mb),
+                'X-File-Name': output_filename,
+                'Access-Control-Expose-Headers': 'X-File-Size-MB, X-File-Name'
+            }
+        )
 
     except subprocess.TimeoutExpired:
         return jsonify({'error': 'Conversion timed out (300s limit)'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     finally:
-        for f in [input_path, palette_path]:
+        for f in [input_path, palette_path, output_path]:
             try:
                 os.remove(f)
             except:
                 pass
-
-@app.route('/download/<filename>')
-def download(filename):
-    safe = secure_filename(filename)
-    path = os.path.join(OUTPUT_FOLDER, safe)
-    if not os.path.exists(path):
-        return jsonify({'error': 'File not found'}), 404
-    return send_file(path, as_attachment=True, download_name=safe)
-
-@app.route('/preview/<filename>')
-def preview(filename):
-    safe = secure_filename(filename)
-    path = os.path.join(OUTPUT_FOLDER, safe)
-    if not os.path.exists(path):
-        return jsonify({'error': 'File not found'}), 404
-    return send_file(path, mimetype='image/gif')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)
