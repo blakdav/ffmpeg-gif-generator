@@ -27,8 +27,6 @@ Point your browser at the app, browse for a video, adjust your parameters, trim 
 - Anyone with network access to the app can upload files and trigger FFmpeg conversions on your server
 - No input sanitization beyond basic file extension checking is guaranteed
 
-Run it on your LAN or Tailnet only.
-
 ## Stack
 
 - **Backend**: Python / Flask
