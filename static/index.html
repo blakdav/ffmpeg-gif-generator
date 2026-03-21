@@ -201,24 +201,47 @@
     cursor: grabbing;
   }
 
-  .trim-times {
+  .trim-inputs {
     display: flex;
     justify-content: space-between;
-    margin-top: 10px;
+    gap: 12px;
+    margin-top: 12px;
   }
 
-  .trim-time {
-    font-family: 'Space Mono', monospace;
-    font-size: 0.8rem;
-    color: var(--accent);
+  .trim-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
   }
+
+  .trim-input-group label {
+    font-size: 0.65rem;
+  }
+
+  .trim-input-group input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--accent);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    padding: 6px 10px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+    text-align: center;
+  }
+
+  .trim-input-group input:focus { border-color: var(--accent); }
+  .trim-input-group input.invalid { border-color: var(--error); color: var(--error); }
 
   .trim-total {
     font-family: 'Space Mono', monospace;
     font-size: 0.68rem;
     color: var(--text-dim);
     text-align: center;
-    margin-top: 6px;
+    margin-top: 8px;
   }
 
   /* Size estimator */
@@ -511,9 +534,15 @@
       <div class="trim-handle" id="handleStart"></div>
       <div class="trim-handle" id="handleEnd"></div>
     </div>
-    <div class="trim-times">
-      <div class="trim-time" id="timeStart">0:00</div>
-      <div class="trim-time" id="timeEnd">0:00</div>
+    <div class="trim-inputs">
+      <div class="trim-input-group">
+        <label>Start</label>
+        <input type="text" id="inputStart" placeholder="0:00:00" oninput="onManualInput('start', this.value)" onblur="onManualBlur('start', this.value)">
+      </div>
+      <div class="trim-input-group">
+        <label>End</label>
+        <input type="text" id="inputEnd" placeholder="0:00:00" oninput="onManualInput('end', this.value)" onblur="onManualBlur('end', this.value)">
+      </div>
     </div>
     <div class="trim-total" id="trimTotal"></div>
   </div>
@@ -614,10 +643,26 @@ function formatSize(bytes) {
   return (bytes / 1024).toFixed(0) + ' KB';
 }
 
+// Format seconds as h:mm:ss or m:ss depending on length
 function formatTime(secs) {
-  const m = Math.floor(secs / 60);
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
   const s = Math.floor(secs % 60).toString().padStart(2, '0');
+  if (h > 0) return h + ':' + m.toString().padStart(2, '0') + ':' + s;
   return m + ':' + s;
+}
+
+// Parse h:mm:ss or m:ss or raw seconds into seconds
+function parseTime(str) {
+  str = str.trim();
+  if (!str) return null;
+  // Raw number
+  if (/^\d+(\.\d+)?$/.test(str)) return parseFloat(str);
+  const parts = str.split(':').map(Number);
+  if (parts.some(isNaN)) return null;
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  return null;
 }
 
 function initTrimSlider() {
@@ -634,11 +679,48 @@ function updateTrimUI() {
   document.getElementById('handleEnd').style.left = (pctEnd * 100) + '%';
   document.getElementById('trimRange').style.left = (pctStart * 100) + '%';
   document.getElementById('trimRange').style.width = ((pctEnd - pctStart) * 100) + '%';
-  document.getElementById('timeStart').textContent = formatTime(trimStart);
-  document.getElementById('timeEnd').textContent = formatTime(trimEnd);
-  document.getElementById('clipDuration').textContent = formatTime(trimEnd - trimStart);
 
+  // Update text inputs only if not currently focused
+  const inStart = document.getElementById('inputStart');
+  const inEnd = document.getElementById('inputEnd');
+  if (document.activeElement !== inStart) inStart.value = formatTime(trimStart);
+  if (document.activeElement !== inEnd) inEnd.value = formatTime(trimEnd);
+  inStart.classList.remove('invalid');
+  inEnd.classList.remove('invalid');
+
+  document.getElementById('clipDuration').textContent = formatTime(trimEnd - trimStart);
   updateEstimate();
+}
+
+function onManualInput(which, val) {
+  const secs = parseTime(val);
+  const input = document.getElementById(which === 'start' ? 'inputStart' : 'inputEnd');
+  if (secs === null || secs < 0 || secs > videoDuration) {
+    input.classList.add('invalid');
+    return;
+  }
+  input.classList.remove('invalid');
+  const minGap = 0.5;
+  if (which === 'start') {
+    const newStart = Math.min(secs, trimEnd - minGap);
+    if (newStart >= 0) { trimStart = newStart; updateTrimUI(); }
+  } else {
+    const newEnd = Math.max(secs, trimStart + minGap);
+    if (newEnd <= videoDuration) { trimEnd = newEnd; updateTrimUI(); }
+  }
+}
+
+function onManualBlur(which, val) {
+  // On blur, reformat the value cleanly
+  const secs = parseTime(val);
+  const input = document.getElementById(which === 'start' ? 'inputStart' : 'inputEnd');
+  if (secs !== null && secs >= 0 && secs <= videoDuration) {
+    input.value = formatTime(which === 'start' ? trimStart : trimEnd);
+    input.classList.remove('invalid');
+  } else {
+    input.value = formatTime(which === 'start' ? trimStart : trimEnd);
+    input.classList.remove('invalid');
+  }
 }
 
 document.addEventListener('mousedown', e => {
@@ -663,7 +745,6 @@ function onDrag(e) {
   let pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
   const secs = pct * videoDuration;
   const minGap = 0.5;
-
   if (activeDrag === 'start') {
     trimStart = Math.max(0, Math.min(secs, trimEnd - minGap));
   } else {
