@@ -2,7 +2,7 @@ import os
 import subprocess
 import uuid
 import io
-from flask import Flask, request, jsonify, send_file, send_from_directory
+from flask import Flask, request, jsonify, send_file, send_from_directory, make_response
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__, static_folder='static')
@@ -79,24 +79,22 @@ def convert():
         if result.returncode != 0:
             return jsonify({'error': f'GIF conversion failed: {result.stderr[-500:]}'}), 500
 
-        # Read GIF into memory
         with open(output_path, 'rb') as f:
             gif_data = f.read()
 
         size_mb = round(len(gif_data) / (1024 * 1024), 2)
         output_filename = f"{base_name}.gif"
 
-        return send_file(
+        response = make_response(send_file(
             io.BytesIO(gif_data),
             mimetype='image/gif',
             as_attachment=False,
-            download_name=output_filename,
-            headers={
-                'X-File-Size-MB': str(size_mb),
-                'X-File-Name': output_filename,
-                'Access-Control-Expose-Headers': 'X-File-Size-MB, X-File-Name'
-            }
-        )
+            download_name=output_filename
+        ))
+        response.headers['X-File-Size-MB'] = str(size_mb)
+        response.headers['X-File-Name'] = output_filename
+        response.headers['Access-Control-Expose-Headers'] = 'X-File-Size-MB, X-File-Name'
+        return response
 
     except subprocess.TimeoutExpired:
         return jsonify({'error': 'Conversion timed out (300s limit)'}), 500
