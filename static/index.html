@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -85,17 +86,8 @@
     transition: all 0.2s;
   }
 
-  #browseBtn:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-
-  #browseBtn.has-file {
-    border-style: solid;
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-
+  #browseBtn:hover { border-color: var(--accent); color: var(--accent); }
+  #browseBtn.has-file { border-style: solid; border-color: var(--accent); color: var(--accent); }
   #fileInput { display: none; }
 
   .params-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -142,21 +134,95 @@
     text-align: right;
   }
 
-  input[type="number"] {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--text);
-    font-family: 'Space Mono', monospace;
-    font-size: 0.85rem;
-    padding: 8px 12px;
-    width: 100%;
-    outline: none;
-    transition: border-color 0.2s;
+  /* Trim slider */
+  #trimSection {
+    display: none;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
   }
 
-  input[type="number"]:focus { border-color: var(--accent); }
+  .trim-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
 
+  .trim-clip-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+  }
+
+  .trim-clip-badge span { color: var(--accent); }
+
+  .trim-slider-wrap {
+    position: relative;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    margin: 0 9px;
+  }
+
+  .trim-track {
+    position: absolute;
+    left: 0; right: 0;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+  }
+
+  .trim-range {
+    position: absolute;
+    height: 4px;
+    background: var(--accent);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+
+  .trim-handle {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: grab;
+    transform: translateX(-50%);
+    box-shadow: 0 0 8px var(--accent-mid);
+    z-index: 2;
+    top: 50%;
+    margin-top: -9px;
+    transition: box-shadow 0.15s;
+  }
+
+  .trim-handle:hover, .trim-handle.dragging {
+    transform: translateX(-50%) scale(1.25);
+    box-shadow: 0 0 14px var(--accent);
+    cursor: grabbing;
+  }
+
+  .trim-times {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+  }
+
+  .trim-time {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--accent);
+  }
+
+  .trim-total {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    text-align: center;
+    margin-top: 6px;
+  }
+
+  /* Size estimator */
   #sizeEstimator {
     display: none;
     margin-top: 20px;
@@ -221,6 +287,7 @@
     margin-top: 8px;
   }
 
+  /* Convert */
   #convertBtn {
     width: 100%;
     padding: 16px;
@@ -281,6 +348,7 @@
     margin-top: 12px;
   }
 
+  /* Result */
   #resultCard { display: none; }
 
   .result-preview {
@@ -431,16 +499,24 @@
       </div>
     </div>
 
-    <div class="param-group">
-      <label>Start time (seconds)</label>
-      <input type="number" id="startTime" value="0" min="0" step="0.1" placeholder="0" oninput="updateEstimate()">
-    </div>
+  </div>
 
-    <div class="param-group">
-      <label>Duration (seconds)</label>
-      <input type="number" id="duration" value="" min="0.1" step="0.1" placeholder="full" oninput="updateEstimate()">
+  <div id="trimSection">
+    <div class="trim-label-row">
+      <label>Trim</label>
+      <div class="trim-clip-badge">clip: <span id="clipDuration">—</span></div>
     </div>
-
+    <div class="trim-slider-wrap" id="trimSliderWrap">
+      <div class="trim-track"></div>
+      <div class="trim-range" id="trimRange"></div>
+      <div class="trim-handle" id="handleStart"></div>
+      <div class="trim-handle" id="handleEnd"></div>
+    </div>
+    <div class="trim-times">
+      <div class="trim-time" id="timeStart">0:00</div>
+      <div class="trim-time" id="timeEnd">0:00</div>
+    </div>
+    <div class="trim-total" id="trimTotal"></div>
   </div>
 
   <div id="sizeEstimator">
@@ -485,12 +561,14 @@
 <script>
 let selectedFile = null;
 let videoDuration = null;
+let trimStart = 0;
+let trimEnd = 0;
+let activeDrag = null;
 let resultFilename = null;
 let currentResultMeta = null;
 let conversionHistory = [];
 
 const fileInput = document.getElementById('fileInput');
-
 fileInput.addEventListener('change', e => { if (e.target.files[0]) setFile(e.target.files[0]); });
 
 function setFile(file) {
@@ -515,7 +593,6 @@ function setFile(file) {
   vid.src = url;
   vid.onloadedmetadata = () => {
     videoDuration = isFinite(vid.duration) ? vid.duration : null;
-    // bytes per second of source video as complexity proxy
     window.inputBytesPerSec = videoDuration ? (file.size / videoDuration) : null;
     URL.revokeObjectURL(url);
     if (videoDuration) {
@@ -538,6 +615,66 @@ function formatSize(bytes) {
   return (bytes / 1024).toFixed(0) + ' KB';
 }
 
+function formatTime(secs) {
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60).toString().padStart(2, '0');
+  return m + ':' + s;
+}
+
+function initTrimSlider() {
+  document.getElementById('trimSection').style.display = 'block';
+  document.getElementById('trimTotal').textContent = 'total: ' + formatTime(videoDuration);
+  updateTrimUI();
+}
+
+function updateTrimUI() {
+  const pctStart = trimStart / videoDuration;
+  const pctEnd = trimEnd / videoDuration;
+
+  document.getElementById('handleStart').style.left = (pctStart * 100) + '%';
+  document.getElementById('handleEnd').style.left = (pctEnd * 100) + '%';
+  document.getElementById('trimRange').style.left = (pctStart * 100) + '%';
+  document.getElementById('trimRange').style.width = ((pctEnd - pctStart) * 100) + '%';
+  document.getElementById('timeStart').textContent = formatTime(trimStart);
+  document.getElementById('timeEnd').textContent = formatTime(trimEnd);
+  document.getElementById('clipDuration').textContent = formatTime(trimEnd - trimStart);
+
+  updateEstimate();
+}
+
+document.getElementById('handleStart').addEventListener('mousedown', e => { activeDrag = 'start'; document.getElementById('handleStart').classList.add('dragging'); e.preventDefault(); });
+document.getElementById('handleEnd').addEventListener('mousedown', e => { activeDrag = 'end'; document.getElementById('handleEnd').classList.add('dragging'); e.preventDefault(); });
+document.getElementById('handleStart').addEventListener('touchstart', e => { activeDrag = 'start'; }, { passive: true });
+document.getElementById('handleEnd').addEventListener('touchstart', e => { activeDrag = 'end'; }, { passive: true });
+
+document.addEventListener('mousemove', onDrag);
+document.addEventListener('touchmove', onDrag, { passive: true });
+document.addEventListener('mouseup', stopDrag);
+document.addEventListener('touchend', stopDrag);
+
+function onDrag(e) {
+  if (!activeDrag || !videoDuration) return;
+  const wrap = document.getElementById('trimSliderWrap');
+  const rect = wrap.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  let pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+  const secs = pct * videoDuration;
+  const minGap = 0.5;
+
+  if (activeDrag === 'start') {
+    trimStart = Math.max(0, Math.min(secs, trimEnd - minGap));
+  } else {
+    trimEnd = Math.min(videoDuration, Math.max(secs, trimStart + minGap));
+  }
+  updateTrimUI();
+}
+
+function stopDrag() {
+  if (!activeDrag) return;
+  document.getElementById('handle' + (activeDrag === 'start' ? 'Start' : 'End')).classList.remove('dragging');
+  activeDrag = null;
+}
+
 function onParamChange(type, val) {
   if (type === 'fps') document.getElementById('fpsVal').textContent = val + ' fps';
   else document.getElementById('widthVal').textContent = val + ' px';
@@ -557,14 +694,12 @@ function updateEstimate() {
     return;
   }
 
-  // Scale bits/pixel/frame constant based on input video bitrate
-  // Low bitrate (simple content) ~500KB/s, high bitrate (complex) ~8MB/s+
   const LOW_BPS = 500_000;
   const HIGH_BPS = 8_000_000;
   const LOW_CONST = 2.0;
   const HIGH_CONST = 6.5;
 
-  let complexityFactor = 0.5; // default if unknown
+  let complexityFactor = 0.5;
   if (window.inputBytesPerSec) {
     complexityFactor = Math.max(0, Math.min(1,
       (window.inputBytesPerSec - LOW_BPS) / (HIGH_BPS - LOW_BPS)
@@ -572,7 +707,6 @@ function updateEstimate() {
   }
 
   const bitsPerPixelPerFrame = LOW_CONST + (HIGH_CONST - LOW_CONST) * complexityFactor;
-
   const height = Math.round(width * 9 / 16);
   const estimatedBytes = (width * height * fps * effectiveDuration * bitsPerPixelPerFrame) / 8;
   const estimatedMB = estimatedBytes / (1024 * 1024);
@@ -620,9 +754,10 @@ async function convert() {
   formData.append('file', selectedFile);
   formData.append('fps', document.getElementById('fpsRange').value);
   formData.append('width', document.getElementById('widthRange').value);
-  formData.append('start_time', document.getElementById('startTime').value || '0');
-  const dur = document.getElementById('duration').value;
-  if (dur) formData.append('duration', dur);
+  formData.append('start_time', trimStart.toFixed(2));
+  if (videoDuration) {
+    formData.append('duration', (trimEnd - trimStart).toFixed(2));
+  }
 
   try {
     const resp = await fetch('/convert', { method: 'POST', body: formData });
@@ -695,10 +830,8 @@ function showResult(data) {
 
 function renderHistory() {
   if (!conversionHistory.length) return;
-  const historyList = document.getElementById('historyList');
-  const historyItems = document.getElementById('historyItems');
-  historyList.style.display = 'block';
-  historyItems.innerHTML = conversionHistory.map(item => `
+  document.getElementById('historyList').style.display = 'block';
+  document.getElementById('historyItems').innerHTML = conversionHistory.map(item => `
     <div class="history-item">
       <div class="hi-name">${item.filename}</div>
       <div class="hi-meta">${item.fps} fps · ${item.width}px · ${item.sizeMB} MB</div>
@@ -719,3 +852,4 @@ function showError(msg) {
 </script>
 </body>
 </html>
+```
