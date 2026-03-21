@@ -641,10 +641,14 @@ function updateTrimUI() {
   updateEstimate();
 }
 
-document.getElementById('handleStart').addEventListener('mousedown', e => { activeDrag = 'start'; document.getElementById('handleStart').classList.add('dragging'); e.preventDefault(); });
-document.getElementById('handleEnd').addEventListener('mousedown', e => { activeDrag = 'end'; document.getElementById('handleEnd').classList.add('dragging'); e.preventDefault(); });
-document.getElementById('handleStart').addEventListener('touchstart', e => { activeDrag = 'start'; }, { passive: true });
-document.getElementById('handleEnd').addEventListener('touchstart', e => { activeDrag = 'end'; }, { passive: true });
+document.addEventListener('mousedown', e => {
+  if (e.target.id === 'handleStart') { activeDrag = 'start'; e.target.classList.add('dragging'); e.preventDefault(); }
+  if (e.target.id === 'handleEnd') { activeDrag = 'end'; e.target.classList.add('dragging'); e.preventDefault(); }
+});
+document.addEventListener('touchstart', e => {
+  if (e.target.id === 'handleStart') activeDrag = 'start';
+  if (e.target.id === 'handleEnd') activeDrag = 'end';
+}, { passive: true });
 
 document.addEventListener('mousemove', onDrag);
 document.addEventListener('touchmove', onDrag, { passive: true });
